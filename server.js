@@ -222,7 +222,18 @@ function serveStatic(req,res,url) {
   fs.readFile(safePath,(err,data)=>{
     if (err) return response(res,404,{error:'Không tìm thấy tài nguyên.'});
     const ext=path.extname(safePath);
-    res.writeHead(200,{'Content-Type':CONTENT_TYPES[ext] || 'application/octet-stream','X-Content-Type-Options':'nosniff','Cache-Control':'no-cache','Content-Security-Policy':"default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'"});
+    // HTML cua THAY/CO HUB V6 su dung 1 khoi JavaScript inline de dieu khien
+    // 12 nhan vien, chuyen dong Chibi va giao viec. CSP cu (script-src 'self')
+    // da chan hoan toan khoi script nay, dan den trang trong va thieu nhan vien.
+    // Chi cho phep cac khoi inline script CO NOI DUNG CHINH XAC trong HTML,
+    // bang ma bam SHA-256; an toan hon so voi 'unsafe-inline'.
+    const inlineHashes = ext === '.html'
+      ? [...data.toString('utf8').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)]
+          .filter(match => !/\bsrc\s*=/.test(match[0].slice(0, match[0].indexOf('>'))))
+          .map(match => "'sha256-" + crypto.createHash('sha256').update(match[1], 'utf8').digest('base64') + "'")
+      : [];
+    const csp = "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' " + inlineHashes.join(' ') + "; connect-src 'self'";
+    res.writeHead(200,{'Content-Type':CONTENT_TYPES[ext] || 'application/octet-stream','X-Content-Type-Options':'nosniff','Cache-Control':'no-cache','Content-Security-Policy':csp});
     res.end(data);
   });
 }
