@@ -10,6 +10,12 @@ const crypto = require('node:crypto');
 
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'public');
+// Tu dong sua bo cuc GitHub neu index.html duoc upload o thu muc goc.
+// Chi sao chep trang HTML vao 'public'; khong bao gio phuc vu file bi mat o thu muc goc.
+if (!fs.existsSync(path.join(PUBLIC, 'index.html')) && fs.existsSync(path.join(ROOT, 'index.html'))) {
+  fs.mkdirSync(PUBLIC, {recursive: true});
+  fs.copyFileSync(path.join(ROOT, 'index.html'), path.join(PUBLIC, 'index.html'));
+}
 const DB_FILE = path.join(ROOT, 'data', 'workspace.json');
 
 function readEnv() {
